@@ -1,52 +1,120 @@
 import * as ArticleModel from "../models/articleModel.js";
 
-// GET /news/ - Health check / server status
+// GET /news/ - Health check
 export function serverStatus(req, res) {
-    // TODO: Implement health check
-    // Return { status: "ok", service: "News Feed Service" }
     res.json({ status: "ok", service: "News Feed Service" });
-}
-
-// GET /news/articles - Get all articles with pagination
-export function getArticles(req, res) {
-    // TODO: Implement pagination
-    // Query params: ?limit=50&offset=0
-    // Use ArticleModel.getAllArticles(limit, offset)
-    // Return { success: true, data: [...], pagination: { limit, offset, total } }
-}
-
-// GET /news/articles/:id - Get single article by ID
-export function getArticleById(req, res) {
-    // TODO: Implement single article fetch
-    // Use ArticleModel.getArticleById(req.params.id)
-    // Include categories via ArticleModel.getArticleCategories(id)
-    // Return 404 if not found
-}
-
-// GET /news/articles/source/:source - Get articles filtered by source
-export function getArticlesBySource(req, res) {
-    // TODO: Implement source filtering
-    // Use ArticleModel.getArticlesBySource(req.params.source, limit)
-    // Query param: ?limit=50
-}
-
-// GET /news/search?q=query - Search articles
-export function searchArticles(req, res) {
-    // TODO: Implement search
-    // Query params: ?q=search_term&limit=50
-    // Use ArticleModel.searchArticles(query, limit)
-    // Return 400 if no query provided
 }
 
 // GET /news/stats - Get article statistics
 export function getStats(req, res) {
-    // TODO: Implement stats endpoint
-    // Use ArticleModel.getArticleCount() and ArticleModel.getSourceStats()
-    // Return { success: true, total: X, bySource: [...] }
+    const total = ArticleModel.getArticleCount();
+    const bySource = ArticleModel.getSourceStats();
+
+    res.json({
+        success: true,
+        total: total.count,
+        bySource
+    });
 }
 
-// GET /news/sources - Get list of sources with articles
+// GET /news/sources - Get list of sources
 export function getSources(req, res) {
-    // TODO: Implement sources list
-    // Use ArticleModel.getSources()
+    const sources = ArticleModel.getSources();
+
+    res.json({
+        success: true,
+        sources
+    });
+}
+
+// GET /news/articles - Get all articles with pagination
+export function getArticles(req, res) {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const articles = ArticleModel.getAllArticles(limit, offset);
+    const total = ArticleModel.getArticleCount();
+
+    res.json({
+        success: true,
+        data: articles,
+        pagination: {
+            limit,
+            offset,
+            total: total.count
+        }
+    });
+}
+
+// GET /news/articles/:id - Get single article by ID
+export function getArticleById(req, res) {
+    const id = parseInt(req.params.id);
+
+    if (isNaN(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid article ID"
+        });
+    }
+
+    const article = ArticleModel.getArticleById(id);
+
+    if (!article) {
+        return res.status(404).json({
+            success: false,
+            message: "Article not found"
+        });
+    }
+
+    const categories = ArticleModel.getArticleCategories(id);
+
+    res.json({
+        success: true,
+        data: {
+            ...article,
+            categories
+        }
+    });
+}
+
+// GET /news/articles/source/:source - Get articles filtered by source
+export function getArticlesBySource(req, res) {
+    const { source } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const articles = ArticleModel.getArticlesBySource(source, limit, offset);
+    const total = ArticleModel.getArticleCountBySource(source);
+
+    res.json({
+        success: true,
+        data: articles,
+        pagination: {
+            limit,
+            offset,
+            total: total.count
+        }
+    });
+}
+
+// GET /news/search?q=query - Search articles
+export function searchArticles(req, res) {
+    const query = req.query.q;
+    const limit = parseInt(req.query.limit) || 50;
+
+    if (!query || query.trim() === "") {
+        return res.status(400).json({
+            success: false,
+            message: "Search query parameter 'q' is required"
+        });
+    }
+
+    const articles = ArticleModel.searchArticles(query.trim(), limit);
+
+    res.json({
+        success: true,
+        data: articles,
+        query: query.trim(),
+        count: articles.length
+    });
 }

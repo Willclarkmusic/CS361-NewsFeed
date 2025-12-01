@@ -58,23 +58,35 @@ export function insertCategories(articleId, categories) {
     }
 }
 
-// Get all articles with pagination
+// Get all articles with pagination (list view fields only)
 export function getAllArticles(limit = 50, offset = 0) {
     return db.prepare(`
-        SELECT * FROM articles
+        SELECT id, title, author, published_date, url, image_url, platform, summary
+        FROM articles
         ORDER BY published_date DESC
         LIMIT ? OFFSET ?
     `).all(limit, offset);
 }
 
-// Get articles by source
-export function getArticlesBySource(source, limit = 50) {
+// Get total article count for pagination
+export function getArticleCount() {
+    return db.prepare("SELECT COUNT(*) as count FROM articles").get();
+}
+
+// Get articles by source with pagination
+export function getArticlesBySource(source, limit = 50, offset = 0) {
     return db.prepare(`
-        SELECT * FROM articles
+        SELECT id, title, author, published_date, url, image_url, platform, summary
+        FROM articles
         WHERE source = ?
         ORDER BY published_date DESC
-        LIMIT ?
-    `).all(source, limit);
+        LIMIT ? OFFSET ?
+    `).all(source, limit, offset);
+}
+
+// Get article count by source for pagination
+export function getArticleCountBySource(source) {
+    return db.prepare("SELECT COUNT(*) as count FROM articles WHERE source = ?").get(source);
 }
 
 // Get single article by ID
@@ -95,16 +107,12 @@ export function getArticleCategories(articleId) {
 export function searchArticles(query, limit = 50) {
     const searchTerm = `%${query}%`;
     return db.prepare(`
-        SELECT * FROM articles
+        SELECT id, title, author, published_date, url, image_url, platform, summary
+        FROM articles
         WHERE title LIKE ? OR summary LIKE ?
         ORDER BY published_date DESC
         LIMIT ?
     `).all(searchTerm, searchTerm, limit);
-}
-
-// Get total article count
-export function getArticleCount() {
-    return db.prepare("SELECT COUNT(*) as count FROM articles").get();
 }
 
 // Get article counts grouped by source
